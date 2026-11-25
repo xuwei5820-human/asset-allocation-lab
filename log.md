@@ -15,3 +15,5 @@
 - [新增] 建立 .gitignore（排除 .obsidian、Claude_work），初始化 git 並推送到 GitHub repo https://github.com/xuwei5820-human/asset-allocation-lab（目前為私人，待使用者改公開）。
 - [修改] 截圖資料夾不上傳 GitHub：加入 .gitignore、從 repo 最新版移除（本機檔案保留；舊 commit 歷史仍含截圖，待處理）；claude.md 補記此規則與 web/ 規則。
 - [修改] repo 改為公開（使用者於 GitHub 設定）：https://github.com/xuwei5820-human/asset-allocation-lab
+- [修改] 主要 TA 鎖定為「25–40 歲台灣上班族（有存款未系統化配置，兼顧買房、育兒、退休）」，其他族群改列次要：更新 `claude.md` 第 2 節。
+- [修改] `web/index.html` 依新 TA 調整：預設範例（月薪 5.8 萬、購屋頭期款／子女教育金／退休準備三目標）、目標快捷按鈕、問卷選項（收入型態、家庭負擔、定期定額經驗）、房貸車貸與勞保勞退用語、每月定期定額分配建議。
