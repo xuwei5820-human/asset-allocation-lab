@@ -14,3 +14,4 @@
 - [待確認] 緊急預備金預設 6 個月、必要生活費只算伙食＋固定成本＋醫藥雜支（劉玉皙老師說法，查證中），程式與畫面皆標「待確認」，月數可調；範例組合與衝擊幅度為教學假設。
 - [新增] 建立 .gitignore（排除 .obsidian、Claude_work），初始化 git 並推送到 GitHub repo https://github.com/xuwei5820-human/asset-allocation-lab（目前為私人，待使用者改公開）。
 - [修改] 截圖資料夾不上傳 GitHub：加入 .gitignore、從 repo 最新版移除（本機檔案保留；舊 commit 歷史仍含截圖，待處理）；claude.md 補記此規則與 web/ 規則。
+- [修改] repo 改為公開（使用者於 GitHub 設定）：https://github.com/xuwei5820-human/asset-allocation-lab
