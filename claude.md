@@ -20,7 +20,7 @@
 | `Asset_Allocation_Lab_產品計畫書_v0.1.md` | 產品計畫書：六大模組、MVP 分期 |
 | `Asset Allocation Lab Wiki 知識庫 v1.0.md` | Perplexity 整理的資料（FIN/GOAL/TVM/PORT/RISK/MGMT/SCEN/QUANT/TW 共 30 篇），**之後用來補 wiki** |
 | `Claude_work/LLM_Wiki/` | 既有 wiki 專案（有自己的 `CLAUDE.md` 與 git） |
-| `截圖過程/` | 作業過程截圖 |
+| `MM_DD截圖過程/`（如 `11_25截圖過程/`） | 作業過程截圖，**只留本機、不上傳 GitHub**（已列入 `.gitignore`） |
 | `.obsidian/` | Obsidian 設定，不要動 |
 
 ## 4. Wiki 結構（`Claude_work/LLM_Wiki/`）
@@ -33,7 +33,7 @@
 - Wiki 頁面檔名：英文小寫 kebab-case（如 `emergency-fund.md`），H1 用繁體中文，必要時括號附英文。
 - 來源摘要頁：`sources/web-YYYY-MM-DD-短題.md`；研究資料夾：`research/YYYY-MM-DD-短題/`。
 - 第一層文件：`名稱_v版本.md`（如 `產品計畫書_v0.2.md`），改版不覆蓋舊版。
-- 日期一律 `YYYY-MM-DD`。網頁程式碼之後放在第一層新資料夾 `web/`（建立時再補規則）。
+- 日期一律 `YYYY-MM-DD`。網頁程式碼放 `web/`（單一 `index.html`，Chart.js 由 CDN 載入）。
 
 ## 6. 工作規則
 1. **每次變動都要記到 `log.md`**（新增、修改、刪除、搬移檔案皆算），依日期記錄，每筆 1–3 行，只能往下追加。
@@ -42,3 +42,4 @@
 4. 台灣制度（稅、勞退、勞保）要註明查核基準日與適用年度。
 5. 全部使用繁體中文；財務術語首次出現可附英文。
 6. 計算公式以知識庫 v1.0 的口徑為準（例如支出與債務還款分開計）。
+7. GitHub repo：`xuwei5820-human/asset-allocation-lab`。截圖、`.obsidian/`、`Claude_work/` 不上傳；新增截圖資料夾須符合 `.gitignore` 的 `*截圖過程/` 規則。

@@ -13,3 +13,4 @@
 - [新增] 建立 `web/index.html`：單頁資產配置 MVP（四步驟：目標與收支、資產負債與緊急預備金、風險問卷、股債金 REITs 現金建議配置），Chart.js 動態圖表，數值改變即時更新。
 - [待確認] 緊急預備金預設 6 個月、必要生活費只算伙食＋固定成本＋醫藥雜支（劉玉皙老師說法，查證中），程式與畫面皆標「待確認」，月數可調；範例組合與衝擊幅度為教學假設。
 - [新增] 建立 .gitignore（排除 .obsidian、Claude_work），初始化 git 並推送到 GitHub repo https://github.com/xuwei5820-human/asset-allocation-lab（目前為私人，待使用者改公開）。
+- [修改] 截圖資料夾不上傳 GitHub：加入 .gitignore、從 repo 最新版移除（本機檔案保留；舊 commit 歷史仍含截圖，待處理）；claude.md 補記此規則與 web/ 規則。
