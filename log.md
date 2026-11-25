@@ -17,3 +17,8 @@
 - [修改] repo 改為公開（使用者於 GitHub 設定）：https://github.com/xuwei5820-human/asset-allocation-lab
 - [修改] 主要 TA 鎖定為「25–40 歲台灣上班族（有存款未系統化配置，兼顧買房、育兒、退休）」，其他族群改列次要：更新 `claude.md` 第 2 節。
 - [修改] `web/index.html` 依新 TA 調整：預設範例（月薪 5.8 萬、購屋頭期款／子女教育金／退休準備三目標）、目標快捷按鈕、問卷選項（收入型態、家庭負擔、定期定額經驗）、房貸車貸與勞保勞退用語、每月定期定額分配建議。
+- [新增] 建立 `專案流程計畫書_v0.1.md`：目前進度、Mermaid 專案架構圖與計算資料流、圖表設計（現有 10 張＋新 TA 建議 7 張）、使用者流程圖、後續流程與 9 項待決事項；同步發布成網頁預覽。
+- [修改] 部署到 Vercel：專案 asset-allocation-lab 的 Root Directory 改為 `web`（Framework: Other）並重新部署，網址 https://asset-allocation-lab-sigma.vercel.app/ ；之後 push 到 main 會自動更新。
+- [修改] wiki persona 改為主要 TA（25–40 歲台灣上班族），原族群列次要：修改 `wiki/overview.md`（新增「目標使用者（Persona）」小節）、wiki/log.md。
+- [新增] 本機草稿 `流程計畫書_計算DAG草稿.md`（計算流程 DAG、進度粗估），不上傳，供計畫書 thread 參考。
+- [修改] 更正：舊 commit 歷史中的截圖已於 2026-11-25 改寫歷史並強制推送清除，GitHub 上所有 commit 皆不含截圖。
