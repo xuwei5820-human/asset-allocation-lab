@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>資產配置實驗室</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* 版面概念：上方即時摘要列＋四步驟導覽；每一步左側輸入、右側圖表，數值一改圖表立即動畫更新 */
+:root {
+  --bg: #F2F4F1; --surface: #FFFFFF; --ink: #17242A; --muted: #5A6A6F; --line: #D9E0DC;
+  --accent: #1F6F68; --accent-soft: #E0EEEA;
+  --warn: #B04E27; --warn-soft: #F7E5DB; --ok: #2C7A4C; --ok-soft: #E0F0E5;
+  --pending: #7D5F00; --pending-soft: #FAEFC6;
+  --c-stock: #2F5D8A; --c-bond: #4F8A5B; --c-gold: #C2961B; --c-reit: #B0603F; --c-cash: #7B9295;
+  --c-re: #6B5B8A; --c-other: #A0A69D;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-num: "Space Grotesk", "Noto Sans TC", ui-monospace, sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10181B; --surface: #172227; --ink: #E3EBE9; --muted: #93A4A8; --line: #2A3A40;
+  --accent: #52B5AA; --accent-soft: #1C3431;
+  --warn: #E68B63; --warn-soft: #3A2419; --ok: #6DC28F; --ok-soft: #1A3224;
+  --pending: #E5C85C; --pending-soft: #3A3217;
+  --c-stock: #6E9CD0; --c-bond: #7DBA88; --c-gold: #E0BC4E; --c-reit: #D98B68; --c-cash: #A0B3B6;
+  --c-re: #A593CA; --c-other: #8C9189; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #10181B; --surface: #172227; --ink: #E3EBE9; --muted: #93A4A8; --line: #2A3A40;
+  --accent: #52B5AA; --accent-soft: #1C3431;
+  --warn: #E68B63; --warn-soft: #3A2419; --ok: #6DC28F; --ok-soft: #1A3224;
+  --pending: #E5C85C; --pending-soft: #3A3217;
+  --c-stock: #6E9CD0; --c-bond: #7DBA88; --c-gold: #E0BC4E; --c-reit: #D98B68; --c-cash: #A0B3B6;
+  --c-re: #A593CA; --c-other: #8C9189; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: .02em; }
+h2 { font-size: 1.2rem; }
+h3 { font-size: .98rem; font-weight: 700; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+.example-chip { display: inline-block; font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-top: 16px; }
+.summary .kpi { background: var(--surface); padding: 12px 16px; min-width: 0; }
+.kpi .label { font-size: .78rem; color: var(--muted); letter-spacing: .04em; }
+.kpi .value { font-family: var(--font-num); font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .sub { font-size: .78rem; }
+.is-warn { color: var(--warn); } .is-ok { color: var(--ok); }
+
+nav.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 18px 0 16px; }
+nav.steps button { font: inherit; text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; display: flex; gap: 10px; align-items: center; min-width: 0; transition: border-color .2s, color .2s, background .2s; }
+nav.steps button .n { font-family: var(--font-num); font-weight: 700; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); flex: none; }
+nav.steps button .t { font-size: .9rem; line-height: 1.3; }
+nav.steps button[aria-selected="true"] { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+nav.steps button[aria-selected="true"] .n { background: var(--accent); color: var(--surface); }
+nav.steps button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.step-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: .84rem; color: var(--muted); }
+.field.full { grid-column: 1 / -1; }
+input[type="number"], input[type="text"], select { font: inherit; font-family: var(--font-num); width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--ink); min-width: 0; }
+input[type="text"] { font-family: var(--font-body); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.group-title { font-size: .76rem; letter-spacing: .08em; color: var(--muted); margin: 14px 0 8px; font-weight: 700; }
+.group-title:first-child { margin-top: 0; }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.badge.pending { background: var(--pending-soft); color: var(--pending); }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.assume { background: var(--accent-soft); color: var(--accent); }
+.note { font-size: .82rem; color: var(--muted); margin: 10px 0 0; }
+.callout { border-radius: 8px; padding: 10px 12px; font-size: .86rem; margin-top: 12px; }
+.callout.pending { background: var(--pending-soft); color: var(--ink); border-left: 3px solid var(--pending); }
+.callout.warn { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+.callout.ok { background: var(--ok-soft); border-left: 3px solid var(--ok); }
+
+.chart-box { position: relative; height: 260px; }
+.chart-box.tall { height: 300px; }
+.chart-box.short { height: 170px; }
+.chart-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+.goal-list { display: flex; flex-direction: column; gap: 10px; }
+.goal { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; align-items: end; }
+.goal .field:first-child { grid-column: 1 / 4; }
+.goal .icon-btn { grid-column: 4; grid-row: 1; }
+.goal .field label { font-size: .74rem; }
+.goal .result { grid-column: 1 / -1; font-size: .82rem; color: var(--muted); }
+.icon-btn { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 7px; padding: 6px 9px; cursor: pointer; }
+.icon-btn:hover { color: var(--warn); border-color: var(--warn); }
+.btn { font: inherit; font-weight: 500; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.step-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+.ef-meter { margin-top: 4px; }
+.ef-meter .bar { height: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.ef-meter .fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .6s cubic-bezier(.2,.8,.2,1), background .3s; }
+.ef-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.ef-stats div { min-width: 0; }
+.ef-stats .value { font-family: var(--font-num); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+.q { padding: 12px 0; border-top: 1px solid var(--line); }
+.q:first-of-type { border-top: 0; padding-top: 0; }
+.q .qt { font-weight: 500; margin-bottom: 8px; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opts label { cursor: pointer; }
+.opts input { position: absolute; opacity: 0; pointer-events: none; }
+.opts span { display: inline-block; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; font-size: .84rem; background: var(--bg); transition: all .15s; }
+.opts input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.opts input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.auto-q { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+
+.profile-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.profile-scale div { text-align: center; font-size: .78rem; padding: 6px 2px; border-radius: 6px; background: var(--bg); color: var(--muted); transition: all .25s; }
+.profile-scale div.on { background: var(--accent); color: var(--surface); font-weight: 700; }
+.result-big { font-size: 1.6rem; font-weight: 700; }
+
+.level-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.level-chips button { font: inherit; font-size: .84rem; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.level-chips button.on { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.level-chips button.rec::after { content: "・建議"; font-size: .74rem; }
+
+table.alloc { width: 100%; border-collapse: collapse; font-size: .88rem; }
+table.alloc th, table.alloc td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+table.alloc th:first-child, table.alloc td:first-child { text-align: left; }
+table.alloc th { font-weight: 500; color: var(--muted); font-size: .78rem; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.table-scroll { overflow-x: auto; }
+.shock-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.shock-grid .field label { font-size: .76rem; }
+
+footer { margin-top: 28px; font-size: .8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+footer ul { margin: 6px 0 0; padding-left: 18px; }
+
+@media (max-width: 960px) { .step-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  nav.steps button .t { font-size: .78rem; }
+  nav.steps button { flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px; }
+  .chart-row, .fields { grid-template-columns: minmax(0, 1fr); }
+  .shock-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .goal input { font-size: .85rem; padding: 6px; }
+  .goal .field:nth-child(4) { grid-column: 3 / 5; }
+  .ef-stats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>資產配置實驗室</h1>
+      <p>從人生目標、現金流與資產負債出發，再決定股票、債券、黃金、REITs 與現金的比例。<span class="example-chip">預設為範例數字，請換成你的</span></p>
+    </div>
+    <button class="btn ghost" id="resetBtn" type="button">恢復範例數字</button>
+  </header>
+
+  <section class="summary" aria-label="即時摘要">
+    <div class="kpi"><div class="label">每月自由現金流</div><div class="value" id="kFcf">—</div><div class="sub muted" id="kSr">—</div></div>
+    <div class="kpi"><div class="label">淨資產</div><div class="value" id="kNw">—</div><div class="sub muted" id="kNwSub">—</div></div>
+    <div class="kpi"><div class="label">緊急預備金缺口</div><div class="value" id="kEf">—</div><div class="sub muted" id="kEfSub">—</div></div>
+    <div class="kpi"><div class="label">風險屬性</div><div class="value" id="kRisk">—</div><div class="sub muted" id="kRiskSub">—</div></div>
+  </section>
+
+  <nav class="steps" role="tablist" aria-label="步驟">
+    <button type="button" role="tab" data-step="1" aria-selected="true"><span class="n">1</span><span class="t">人生目標與每月收支</span></button>
+    <button type="button" role="tab" data-step="2" aria-selected="false"><span class="n">2</span><span class="t">資產負債與緊急預備金</span></button>
+    <button type="button" role="tab" data-step="3" aria-selected="false"><span class="n">3</span><span class="t">風險問卷</span></button>
+    <button type="button" role="tab" data-step="4" aria-selected="false"><span class="n">4</span><span class="t">建議配置</span></button>
+  </nav>
+
+  <!-- ===== 步驟 1 ===== -->
+  <section class="step" id="step1" role="tabpanel">
+    <div class="step-grid">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>每月收支</h2><span class="small muted">單位：新臺幣／月</span></div>
+          <div class="group-title">收入</div>
+          <div class="fields">
+            <div class="field"><label for="income">稅後薪資（扣除勞健保、勞退自提）</label><input type="number" id="income" min="0" step="1000"></div>
+            <div class="field"><label for="otherIncome">其他收入</label><input type="number" id="otherIncome" min="0" step="1000"></div>
+          </div>
+          <div class="group-title">必要生活費 <span class="badge pending" title="劉玉皙老師的說法，查證中">待確認</span></div>
+          <div class="fields">
+            <div class="field"><label for="food">伙食</label><input type="number" id="food" min="0" step="500"></div>
+            <div class="field"><label for="fixed">固定成本（房租、水電、電信、保險）</label><input type="number" id="fixed" min="0" step="500"></div>
+            <div class="field"><label for="medical">醫藥雜支</label><input type="number" id="medical" min="0" step="500"></div>
+            <div class="field"><label for="flexible">其他彈性支出（娛樂、旅遊、購物）</label><input type="number" id="flexible" min="0" step="500"></div>
+          </div>
+          <div class="group-title">債務還款（與支出分開計）</div>
+          <div class="fields">
+            <div class="field full"><label for="debtPay">每月債務本息合計</label><input type="number" id="debtPay" min="0" step="500"></div>
+          </div>
+          <p class="note">必要生活費只算伙食、固定成本、醫藥雜支三項，這是劉玉皙老師的說法，目前標示為待確認。依專案口徑，債務還款另外一欄計算，不算進支出。</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>人生目標</h2><button class="btn ghost" type="button" id="addGoal">＋ 新增目標</button></div>
+          <div class="goal-list" id="goalList"></div>
+          <div class="group-title">試算假設 <span class="badge assume">教學假設，不是預測</span></div>
+          <div class="fields">
+            <div class="field"><label for="annualReturn">有效年報酬假設（%）</label><input type="number" id="annualReturn" min="0" max="15" step="0.5"></div>
+            <div class="field"><label for="goalGrowth">目標成本年成長率（%）</label><input type="number" id="goalGrowth" min="0" max="10" step="0.5"></div>
+          </div>
+          <p class="note">每月應存＝把今日成本按成長率換成到期金額，扣掉已指派資金的未來值，再以每月報酬反推月存金額（月底投入）。</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h3>每月收入的去向</h3><span class="small muted" id="cfNote"></span></div>
+          <div class="chart-box"><canvas id="cfChart" aria-label="每月收入去向長條圖"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>各目標每月應存 vs 可用現金流</h3><span id="goalBadge"></span></div>
+          <div class="chart-box"><canvas id="goalChart" aria-label="目標每月應存長條圖"></canvas></div>
+          <div id="goalMsg"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>目標時間軸</h3><span class="small muted">泡泡大小＝到期金額</span></div>
+          <div class="chart-box short"><canvas id="timelineChart" aria-label="目標時間軸"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-actions"><span></span><button class="btn" type="button" data-go="2">下一步：資產負債</button></div>
+  </section>
+
+  <!-- ===== 步驟 2 ===== -->
+  <section class="step" id="step2" role="tabpanel" hidden>
+    <div class="step-grid">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>資產</h2><span class="small muted">以今天市值估計</span></div>
+          <div class="fields">
+            <div class="field"><label for="a_cash">現金與存款</label><input type="number" id="a_cash" min="0" step="10000"></div>
+            <div class="field"><label for="a_stock">股票／股票 ETF</label><input type="number" id="a_stock" min="0" step="10000"></div>
+            <div class="field"><label for="a_bond">債券／債券 ETF</label><input type="number" id="a_bond" min="0" step="10000"></div>
+            <div class="field"><label for="a_gold">黃金</label><input type="number" id="a_gold" min="0" step="10000"></div>
+            <div class="field"><label for="a_reit">REITs</label><input type="number" id="a_reit" min="0" step="10000"></div>
+            <div class="field"><label for="a_re">不動產（含自住）</label><input type="number" id="a_re" min="0" step="100000"></div>
+            <div class="field full"><label for="a_other">其他資產</label><input type="number" id="a_other" min="0" step="10000"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>負債</h2><span class="small muted">填未償餘額</span></div>
+          <div class="fields">
+            <div class="field"><label for="l_mortgage">房屋貸款</label><input type="number" id="l_mortgage" min="0" step="100000"></div>
+            <div class="field"><label for="l_student">學貸</label><input type="number" id="l_student" min="0" step="10000"></div>
+            <div class="field"><label for="l_credit">信用貸款</label><input type="number" id="l_credit" min="0" step="10000"></div>
+            <div class="field"><label for="l_card">信用卡未繳</label><input type="number" id="l_card" min="0" step="1000"></div>
+            <div class="field full"><label for="l_other">其他負債</label><input type="number" id="l_other" min="0" step="10000"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>緊急預備金設定</h2><span class="badge pending">待確認</span></div>
+          <div class="field">
+            <label for="efMonths">覆蓋月數：<strong class="num" id="efMonthsOut">6</strong> 個月</label>
+            <input type="range" id="efMonths" min="3" max="12" step="1">
+          </div>
+          <div class="fields" style="margin-top:10px">
+            <div class="field"><label for="efBuffer">一次性備用金（如保險自負額）</label><input type="number" id="efBuffer" min="0" step="5000"></div>
+            <div class="field" style="justify-content:flex-end"><label><input type="checkbox" id="efIncludeDebt"> 必要支出加計債務還款</label></div>
+          </div>
+          <div class="callout pending">預設 6 個月是劉玉皙老師的底線說法，必要生活費只算伙食、固定成本、醫藥雜支三項。這個說法還在查證，所以月數可以自己調整，確認後會更新預設值。</div>
+          <p class="note">可動用資金＝現金與存款扣掉已指派給人生目標的資金，同一筆錢不重複計算。信用額度不算現金。</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h3>緊急預備金進度</h3><span id="efBadge"></span></div>
+          <div class="ef-meter"><div class="bar"><div class="fill" id="efFill"></div></div></div>
+          <div class="ef-stats">
+            <div><div class="small muted">目標金額</div><div class="value" id="efTarget">—</div></div>
+            <div><div class="small muted">可動用資金</div><div class="value" id="efAvail">—</div></div>
+            <div><div class="small muted">可撐月數</div><div class="value" id="efCover">—</div></div>
+          </div>
+          <div id="efMsg"></div>
+        </div>
+        <div class="chart-row">
+          <div class="panel">
+            <div class="panel-head"><h3>資產結構</h3></div>
+            <div class="chart-box"><canvas id="assetChart" aria-label="資產結構圓環圖"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>資產、負債與淨值</h3></div>
+            <div class="chart-box"><canvas id="bsChart" aria-label="資產負債長條圖"></canvas></div>
+          </div>
+        </div>
+        <p class="note">淨資產不等於可立即動用的錢：自住房、退休專戶、已指派給目標的資金都不能隨時用。</p>
+      </div>
+    </div>
+    <div class="step-actions"><button class="btn ghost" type="button" data-go="1">上一步</button><button class="btn" type="button" data-go="3">下一步：風險問卷</button></div>
+  </section>
+
+  <!-- ===== 步驟 3 ===== -->
+  <section class="step" id="step3" role="tabpanel" hidden>
+    <div class="step-grid">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>風險承受能力</h2><span class="small muted">虧損會不會影響生活與目標</span></div>
+          <div id="capQs"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>風險承受意願</h2><span class="small muted">心理上能不能忍住不賣</span></div>
+          <div id="willQs"></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h3>評估結果</h3><span class="small muted">取能力與意願中較低者</span></div>
+          <div class="result-big" id="riskName">—</div>
+          <div class="profile-scale" id="profileScale"></div>
+          <div class="chart-box short" style="margin-top:12px"><canvas id="riskBar" aria-label="能力與意願分數"></canvas></div>
+          <div id="riskMsg"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>各題得分（0–4）</h3></div>
+          <div class="chart-box tall"><canvas id="riskRadar" aria-label="各題得分雷達圖"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-actions"><button class="btn ghost" type="button" data-go="2">上一步</button><button class="btn" type="button" data-go="4">下一步：看建議配置</button></div>
+  </section>
+
+  <!-- ===== 步驟 4 ===== -->
+  <section class="step" id="step4" role="tabpanel" hidden>
+    <div class="step-grid">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>建議配置</h2><span class="badge assume">教學用範例組合</span></div>
+          <p class="small muted" style="margin:0 0 8px">點選其他屬性可以比較，圖表會即時切換。</p>
+          <div class="level-chips" id="levelChips"></div>
+          <div class="table-scroll" style="margin-top:12px">
+            <table class="alloc" id="allocTable"></table>
+          </div>
+          <div id="allocMsg"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>市場衝擊情境</h2><span class="badge assume">情境假設，不是預測</span></div>
+          <div class="shock-grid" id="shockGrid"></div>
+          <p class="note">組合損益＝各資產權重 × 該資產的情境漲跌，加總後與你在問卷中可接受的最大虧損比較。</p>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h3 id="allocTitle">建議配置比例</h3><span class="small muted" id="investableNote"></span></div>
+          <div class="chart-box tall"><canvas id="allocChart" aria-label="建議配置圓環圖"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>目前持有 vs 建議</h3><span class="small muted">占金融資產 %</span></div>
+          <div class="chart-box"><canvas id="compareChart" aria-label="目前與建議配置比較"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>五種組合在衝擊情境下的損益</h3><span id="stressBadge"></span></div>
+          <div class="chart-box"><canvas id="stressChart" aria-label="衝擊情境損益"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-actions"><button class="btn ghost" type="button" data-go="3">上一步</button><span></span></div>
+  </section>
+
+  <footer>
+    <strong>使用說明與限制</strong>
+    <ul>
+      <li>本工具不推薦個別金融商品。報酬率、成本成長率、範例組合與衝擊幅度都是教學假設，不是預測。</li>
+      <li>緊急預備金月數與必要生活費的口徑採劉玉皙老師的說法，標示「待確認」，查證後更新。</li>
+      <li>計算口徑依專案 wiki：個人資產負債表、現金流與儲蓄率、緊急預備金、目標資金缺口、每月應存、風險承受度（能力與意願取低者，不以年齡換算股票比例）。</li>
+      <li>輸入只存在你的瀏覽器裡，不會上傳。</li>
+    </ul>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 參數 ---------- */
+  // 待確認：緊急預備金覆蓋月數採劉玉皙老師的底線說法（6 個月），
+  // 必要生活費只算「伙食、固定成本、醫藥雜支」三項。另一個 thread 查證中，確認後更新這兩個設定。
+  const EF_MONTHS_DEFAULT = 6;          // 待確認
+  const EF_INCLUDE_DEBT_DEFAULT = false; // 待確認：wiki 知識庫口徑會加計不可避免的還款；老師口徑只算三項
+
+  const ASSETS = [
+    { key: "stock", name: "股票", color: "--c-stock" },
+    { key: "bond", name: "債券", color: "--c-bond" },
+    { key: "gold", name: "黃金", color: "--c-gold" },
+    { key: "reit", name: "REITs", color: "--c-reit" },
+    { key: "cash", name: "現金", color: "--c-cash" }
+  ];
+  // 教學用範例組合（百分比），非市場預測；依風險屬性由保守到積極
+  const MODELS = [
+    { name: "保守型", w: { stock: 20, bond: 50, gold: 10, reit: 5, cash: 15 } },
+    { name: "穩健偏保守", w: { stock: 35, bond: 40, gold: 10, reit: 5, cash: 10 } },
+    { name: "穩健型", w: { stock: 50, bond: 30, gold: 8, reit: 7, cash: 5 } },
+    { name: "成長型", w: { stock: 65, bond: 20, gold: 7, reit: 5, cash: 3 } },
+    { name: "積極型", w: { stock: 80, bond: 10, gold: 5, reit: 3, cash: 2 } }
+  ];
+  const ACCEPT_LOSS = [5, 10, 15, 25, 35]; // 問卷 W3 選項對應可接受最大年虧損 %
+
+  const DEFAULTS = {
+    income: 52000, otherIncome: 3000,
+    food: 9000, fixed: 14000, medical: 2000, flexible: 8000, debtPay: 4000,
+    annualReturn: 4, goalGrowth: 2,
+    goals: [
+      { name: "出國進修", cost: 1000000, years: 4, assigned: 100000 },
+      { name: "購屋頭期款", cost: 3000000, years: 8, assigned: 150000 }
+    ],
+    a_cash: 280000, a_stock: 220000, a_bond: 30000, a_gold: 0, a_reit: 0, a_re: 0, a_other: 0,
+    l_mortgage: 0, l_student: 120000, l_credit: 0, l_card: 0, l_other: 0,
+    efMonths: EF_MONTHS_DEFAULT, efBuffer: 20000, efIncludeDebt: EF_INCLUDE_DEBT_DEFAULT,
+    answers: { c1: 2, c2: 2, c5: 3, w1: 2, w2: 1, w3: 2, w4: 2 },
+    pick: null,
+    shocks: { stock: -30, bond: -5, gold: 10, reit: -35, cash: 0 }
+  };
+  const STORE_KEY = "aal-mvp-v1";
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  let S = clone(DEFAULTS);
+  try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); if (s) S = Object.assign(clone(DEFAULTS), s); } catch (e) {}
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} };
+
+  /* ---------- 問卷 ---------- */
+  const CAP_QS = [
+    { id: "c1", q: "這筆投資最早什麼時候需要動用？", o: ["1 年內", "1–3 年", "3–7 年", "7–15 年", "15 年以上"] },
+    { id: "c2", q: "你的收入穩定度？", o: ["不穩定或待業", "接案、浮動大", "一般受雇", "穩定受雇多年", "非常穩定（如公職）"] },
+    { id: "c3", auto: true, q: "緊急預備金準備程度（依步驟 2 自動計算）" },
+    { id: "c4", auto: true, q: "每月債務負擔占收入比（依步驟 1 自動計算）" },
+    { id: "c5", q: "有多少人靠你的收入生活？", o: ["3 人以上", "2 人", "1 人", "部分負擔", "只有自己"] }
+  ];
+  const WILL_QS = [
+    { id: "w1", q: "如果投資一年內跌了 20%，你會？", o: ["全部賣掉", "賣掉一部分", "不動", "小幅加碼", "大幅加碼"] },
+    { id: "w2", q: "你的投資經驗？", o: ["沒有", "1 年以內", "1–3 年", "3 年以上", "3 年以上且經歷過大跌"] },
+    { id: "w3", q: "一年內最多能接受虧損多少？", o: ACCEPT_LOSS.map((x) => x + "%") },
+    { id: "w4", q: "你比較在意？", o: ["保住本金", "穩定收益", "兩者平衡", "較高成長", "長期最大成長"] }
+  ];
+
+  /* ---------- 工具 ---------- */
+  const $ = (id) => document.getElementById(id);
+  const fmt = (v) => (v == null || !isFinite(v)) ? "—" : "NT$" + Math.round(v).toLocaleString("zh-TW");
+  const fmtW = (v) => { if (v == null || !isFinite(v)) return "—"; const a = Math.abs(v); const s = v < 0 ? "−" : ""; return a >= 10000 ? s + (a / 10000).toLocaleString("zh-TW", { maximumFractionDigits: 1 }) + " 萬" : s + Math.round(a).toLocaleString("zh-TW"); };
+  const pct = (v, d = 0) => (v == null || !isFinite(v)) ? "—" : (v * 100).toFixed(d) + "%";
+  const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const badge = (cls, text) => `<span class="badge ${cls}">${text}</span>`;
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const levelOf = (s) => s < 20 ? 0 : s < 40 ? 1 : s < 60 ? 2 : s < 80 ? 3 : 4;
+
+  /* ---------- 計算（依 wiki 口徑） ---------- */
+  function compute() {
+    const Y = S.income + S.otherIncome;
+    const essential3 = S.food + S.fixed + S.medical;
+    const E = essential3 + S.flexible;
+    const FCF = Y - E - S.debtPay;                       // FCF = Y − E − DS
+    const SR = Y > 0 ? FCF / Y : null;                   // 收入為 0 回傳 null
+    const rm = Math.pow(1 + S.annualReturn / 100, 1 / 12) - 1;
+    const goals = S.goals.map((g) => {
+      const T = Math.max(0, g.years), n = Math.round(T * 12);
+      const GT = g.cost * Math.pow(1 + S.goalGrowth / 100, T);  // G_T = G0(1+πg)^T
+      const fvP = g.assigned * Math.pow(1 + rm, n);
+      let c;
+      if (n === 0) c = Math.max(0, GT - g.assigned);
+      else if (rm === 0) c = Math.max(0, (GT - g.assigned) / n);
+      else c = Math.max(0, (GT - fvP) * rm / (Math.pow(1 + rm, n) - 1));
+      return Object.assign({}, g, { GT, fvP, gap: GT - fvP, c, n });
+    });
+    const totalC = goals.reduce((a, g) => a + g.c, 0);
+    const assigned = S.goals.reduce((a, g) => a + g.assigned, 0);
+
+    const assetsTotal = S.a_cash + S.a_stock + S.a_bond + S.a_gold + S.a_reit + S.a_re + S.a_other;
+    const liabTotal = S.l_mortgage + S.l_student + S.l_credit + S.l_card + S.l_other;
+    const NW = assetsTotal - liabTotal;
+    const financial = S.a_cash + S.a_stock + S.a_bond + S.a_gold + S.a_reit;
+
+    const essentialEF = essential3 + (S.efIncludeDebt ? S.debtPay : 0);
+    const Lavail = Math.max(0, S.a_cash - assigned);
+    const EFt = S.efMonths * essentialEF + S.efBuffer;   // EF* = m·E_essential + U
+    const efGap = Math.max(0, EFt - Lavail);
+    const coverMonths = essentialEF > 0 ? Lavail / essentialEF : null;
+    const efRatio = EFt > 0 ? Lavail / EFt : 1;
+
+    const a = S.answers;
+    const c3 = efRatio >= 1 ? 4 : efRatio >= .75 ? 3 : efRatio >= .5 ? 2 : efRatio >= .25 ? 1 : 0;
+    const dti = Y > 0 ? S.debtPay / Y : 1;
+    const c4 = dti < .1 ? 4 : dti < .2 ? 3 : dti < .3 ? 2 : dti < .4 ? 1 : 0;
+    const capItems = [a.c1, a.c2, c3, c4, a.c5];
+    const willItems = [a.w1, a.w2, a.w3, a.w4];
+    const cap = capItems.reduce((x, y) => x + y, 0) / 20 * 100;
+    const will = willItems.reduce((x, y) => x + y, 0) / 16 * 100;
+    const capL = levelOf(cap), willL = levelOf(will);
+    const rec = Math.min(capL, willL);
+    const level = S.pick == null ? rec : S.pick;
+
+    const investable = Math.max(0, financial - assigned - EFt);
+    const lossOf = (w) => ASSETS.reduce((s, k) => s + w[k.key] / 100 * S.shocks[k.key] / 100, 0);
+
+    return { Y, E, essential3, FCF, SR, rm, goals, totalC, assigned, assetsTotal, liabTotal, NW, financial,
+      essentialEF, Lavail, EFt, efGap, coverMonths, efRatio, c3, c4, dti, capItems, willItems, cap, will,
+      capL, willL, rec, level, investable, lossOf };
+  }
+
+  /* ---------- 圖表 ---------- */
+  const charts = {};
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function chartDefaults() {
+    Chart.defaults.font.family = css("--font-body");
+    Chart.defaults.color = css("--muted");
+    Chart.defaults.borderColor = css("--line");
+    Chart.defaults.animation = reduce ? false : { duration: 700, easing: "easeOutQuart" };
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.boxHeight = 10;
+    Chart.defaults.plugins.tooltip.callbacks.label = function (ctx) {
+      const v = ctx.parsed && typeof ctx.parsed === "object" ? (ctx.chart.config.type === "bar" && ctx.chart.options.indexAxis === "y" ? ctx.parsed.x : ctx.parsed.y) : ctx.parsed;
+      return " " + (ctx.dataset.label || ctx.label) + "：" + (ctx.chart.$pct ? Number(v).toFixed(1) + "%" : fmt(v));
+    };
+  }
+  const moneyTick = (v) => fmtW(v);
+
+  function initCharts() {
+    chartDefaults();
+    const grid = { color: css("--line") };
+    charts.cf = new Chart($("cfChart"), {
+      type: "bar",
+      data: { labels: ["收入", "去向"], datasets: [] },
+      options: { indexAxis: "y", maintainAspectRatio: false, responsive: true,
+        scales: { x: { stacked: true, ticks: { callback: moneyTick }, grid }, y: { stacked: true, grid: { display: false } } },
+        plugins: { legend: { position: "bottom" } } }
+    });
+    charts.goal = new Chart($("goalChart"), {
+      type: "bar", data: { labels: [], datasets: [] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { y: { beginAtZero: true, ticks: { callback: moneyTick }, grid }, x: { grid: { display: false } } },
+        plugins: { legend: { position: "bottom" } } }
+    });
+    charts.timeline = new Chart($("timelineChart"), {
+      type: "bubble", data: { datasets: [] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { x: { min: 0, title: { display: true, text: "距今年數" }, grid }, y: { display: false, min: 0, max: 2 } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + c.raw.name + "：" + c.raw.x + " 年後需 " + fmt(c.raw.v) } } } }
+    });
+    charts.asset = new Chart($("assetChart"), {
+      type: "doughnut", data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: css("--surface"), borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, responsive: true, cutout: "62%", plugins: { legend: { position: "bottom" } } }
+    });
+    charts.bs = new Chart($("bsChart"), {
+      type: "bar", data: { labels: ["總資產", "總負債", "淨資產"], datasets: [{ label: "金額", data: [], backgroundColor: [], borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { y: { ticks: { callback: moneyTick }, grid }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+    });
+    charts.riskBar = new Chart($("riskBar"), {
+      type: "bar", data: { labels: ["承受能力", "承受意願"], datasets: [{ label: "分數", data: [], backgroundColor: [], borderRadius: 6 }] },
+      options: { indexAxis: "y", maintainAspectRatio: false, responsive: true,
+        scales: { x: { min: 0, max: 100, ticks: { stepSize: 20 }, grid }, y: { grid: { display: false } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + c.parsed.x.toFixed(0) + " 分" } } } }
+    });
+    charts.radar = new Chart($("riskRadar"), {
+      type: "radar",
+      data: { labels: ["動用時間", "收入穩定", "預備金", "債務負擔", "扶養負擔", "跌時反應", "投資經驗", "可承受虧損", "投資目的"], datasets: [] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { r: { min: 0, max: 4, ticks: { stepSize: 1, display: false }, grid, angleLines: grid, pointLabels: { color: css("--ink"), font: { size: 12 } } } },
+        plugins: { legend: { position: "bottom" }, tooltip: { callbacks: { label: (c) => " " + c.dataset.label + "：" + c.parsed.r + " / 4" } } } }
+    });
+    charts.alloc = new Chart($("allocChart"), {
+      type: "doughnut", data: { labels: ASSETS.map((a) => a.name), datasets: [{ data: [], backgroundColor: [], borderColor: css("--surface"), borderWidth: 3, hoverOffset: 10 }] },
+      options: { maintainAspectRatio: false, responsive: true, cutout: "58%", animation: reduce ? false : { animateRotate: true, duration: 800, easing: "easeOutQuart" },
+        plugins: { legend: { position: "right" }, tooltip: { callbacks: { label: (c) => " " + c.label + "：" + c.parsed + "%" } } } }
+    });
+    charts.alloc.$pct = true;
+    charts.compare = new Chart($("compareChart"), {
+      type: "bar", data: { labels: ASSETS.map((a) => a.name), datasets: [] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + "%" }, grid }, x: { grid: { display: false } } },
+        plugins: { legend: { position: "bottom" } } }
+    });
+    charts.compare.$pct = true;
+    charts.stress = new Chart($("stressChart"), {
+      type: "bar", data: { labels: MODELS.map((m) => m.name), datasets: [] },
+      options: { maintainAspectRatio: false, responsive: true,
+        scales: { y: { ticks: { callback: (v) => v + "%" }, grid }, x: { grid: { display: false } } },
+        plugins: { legend: { position: "bottom" } } }
+    });
+    charts.stress.$pct = true;
+  }
+
+  /* ---------- 介面產生 ---------- */
+  const FIELD_IDS = ["income", "otherIncome", "food", "fixed", "medical", "flexible", "debtPay", "annualReturn", "goalGrowth",
+    "a_cash", "a_stock", "a_bond", "a_gold", "a_reit", "a_re", "a_other", "l_mortgage", "l_student", "l_credit", "l_card", "l_other", "efBuffer"];
+
+  function fillInputs() {
+    FIELD_IDS.forEach((id) => { $(id).value = S[id]; });
+    $("efMonths").value = S.efMonths;
+    $("efIncludeDebt").checked = !!S.efIncludeDebt;
+    renderGoals(); renderQuestions(); renderShocks();
+  }
+
+  function renderGoals() {
+    $("goalList").innerHTML = S.goals.map((g, i) => `
+      <div class="goal" data-i="${i}">
+        <div class="field"><label for="g_name_${i}">目標名稱</label><input type="text" id="g_name_${i}" data-k="name" value="${esc(g.name)}"></div>
+        <div class="field"><label for="g_cost_${i}">今日成本</label><input type="number" id="g_cost_${i}" data-k="cost" min="0" step="10000" value="${g.cost}"></div>
+        <div class="field"><label for="g_years_${i}">幾年後</label><input type="number" id="g_years_${i}" data-k="years" min="0" max="50" step="1" value="${g.years}"></div>
+        <div class="field"><label for="g_assigned_${i}">已指派資金</label><input type="number" id="g_assigned_${i}" data-k="assigned" min="0" step="10000" value="${g.assigned}"></div>
+        <button class="icon-btn" type="button" data-del="${i}" aria-label="刪除目標">刪除</button>
+        <div class="result" id="g_res_${i}"></div>
+      </div>`).join("") || '<p class="muted small">還沒有目標，按「新增目標」開始。</p>';
+  }
+
+  function qHTML(q) {
+    if (q.auto) return `<div class="q"><div class="auto-q"><div class="qt">${q.q}</div><span id="auto_${q.id}"></span></div></div>`;
+    return `<div class="q"><div class="qt">${q.q}</div><div class="opts">${q.o.map((t, v) =>
+      `<label><input type="radio" name="${q.id}" id="${q.id}_${v}" value="${v}" ${S.answers[q.id] === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div></div>`;
+  }
+  function renderQuestions() {
+    $("capQs").innerHTML = CAP_QS.map(qHTML).join("");
+    $("willQs").innerHTML = WILL_QS.map(qHTML).join("");
+    $("profileScale").innerHTML = MODELS.map((m) => `<div>${m.name}</div>`).join("");
+  }
+  function renderShocks() {
+    $("shockGrid").innerHTML = ASSETS.map((a) => `
+      <div class="field"><label for="sh_${a.key}">${a.name} <strong class="num" id="sh_out_${a.key}">${S.shocks[a.key]}%</strong></label>
+      <input type="range" id="sh_${a.key}" data-shock="${a.key}" min="-60" max="40" step="1" value="${S.shocks[a.key]}"></div>`).join("");
+  }
+
+  /* ---------- 更新畫面 ---------- */
+  function update() {
+    const R = compute();
+    const C = (n) => css(n);
+    const ok = C("--ok"), warn = C("--warn"), accent = C("--accent");
+
+    // 摘要
+    $("kFcf").textContent = fmt(R.FCF); $("kFcf").className = "value " + (R.FCF < 0 ? "is-warn" : "");
+    $("kSr").textContent = R.SR == null ? "收入為 0，無法計算儲蓄率" : "現金儲蓄率 " + pct(R.SR, 1);
+    $("kNw").textContent = fmt(R.NW); $("kNw").className = "value " + (R.NW < 0 ? "is-warn" : "");
+    $("kNwSub").textContent = "資產 " + fmtW(R.assetsTotal) + "／負債 " + fmtW(R.liabTotal);
+    $("kEf").textContent = R.efGap > 0 ? fmt(R.efGap) : "已足額"; $("kEf").className = "value " + (R.efGap > 0 ? "is-warn" : "is-ok");
+    $("kEfSub").innerHTML = "目標 " + S.efMonths + " 個月 " + badge("pending", "待確認");
+    $("kRisk").textContent = MODELS[R.rec].name;
+    $("kRiskSub").textContent = "能力 " + R.cap.toFixed(0) + "／意願 " + R.will.toFixed(0);
+
+    // 步驟 1：現金流
+    const fcfPos = Math.max(0, R.FCF);
+    charts.cf.data.datasets = [
+      { label: "收入", data: [R.Y, 0], backgroundColor: accent, borderRadius: 4 },
+      { label: "必要生活費", data: [0, R.essential3], backgroundColor: C("--c-stock") },
+      { label: "彈性支出", data: [0, S.flexible], backgroundColor: C("--c-gold") },
+      { label: "債務還款", data: [0, S.debtPay], backgroundColor: C("--c-reit") },
+      { label: "自由現金流", data: [0, fcfPos], backgroundColor: ok }
+    ];
+    charts.cf.update();
+    $("cfNote").innerHTML = R.FCF < 0 ? badge("warn", "入不敷出 " + fmt(-R.FCF)) : "儲蓄率 " + pct(R.SR, 1);
+
+    // 步驟 1：目標
+    R.goals.forEach((g, i) => {
+      const el = $("g_res_" + i); if (!el) return;
+      el.innerHTML = `${g.years} 年後約需 <strong class="num">${fmt(g.GT)}</strong>，扣掉已指派資金未來值後缺口 <strong class="num">${fmt(Math.max(0, g.gap))}</strong>，每月應存 <strong class="num">${fmt(g.c)}</strong>`;
+    });
+    charts.goal.data.labels = R.goals.map((g) => g.name || "未命名");
+    charts.goal.data.datasets = [
+      { type: "bar", label: "每月應存", data: R.goals.map((g) => g.c), backgroundColor: R.goals.map(() => C("--c-stock")), borderRadius: 6, order: 2 },
+      { type: "line", label: "每月自由現金流", data: R.goals.map(() => fcfPos), borderColor: ok, backgroundColor: ok, borderDash: [6, 4], pointRadius: 0, borderWidth: 2, order: 1 }
+    ];
+    charts.goal.update();
+    const feasible = R.totalC <= fcfPos;
+    $("goalBadge").innerHTML = R.goals.length ? (feasible ? badge("ok", "可行") : badge("warn", "超出預算")) : "";
+    $("goalMsg").innerHTML = !R.goals.length ? "" : feasible
+      ? `<div class="callout ok">所有目標每月合計應存 <strong class="num">${fmt(R.totalC)}</strong>，在每月自由現金流 <strong class="num">${fmt(fcfPos)}</strong> 之內，剩餘 <strong class="num">${fmt(fcfPos - R.totalC)}</strong>。</div>`
+      : `<div class="callout warn">所有目標每月合計應存 <strong class="num">${fmt(R.totalC)}</strong>，超過每月自由現金流 <strong class="num">${fmt(fcfPos)}</strong>，差 <strong class="num">${fmt(R.totalC - fcfPos)}</strong>。可以延後目標、降低金額或增加收入；不要用調高報酬假設來掩蓋缺口。</div>`;
+    const maxGT = Math.max(1, ...R.goals.map((g) => g.GT));
+    const maxYear = Math.max(5, ...R.goals.map((g) => g.years));
+    charts.timeline.options.scales.x.max = Math.ceil(maxYear * 1.15);
+    charts.timeline.data.datasets = [{ data: R.goals.map((g) => ({ x: g.years, y: 1, r: 8 + 22 * Math.sqrt(g.GT / maxGT), name: g.name, v: g.GT })),
+      backgroundColor: R.goals.map((g, i) => [C("--c-stock"), C("--c-gold"), C("--c-bond"), C("--c-reit"), C("--c-re")][i % 5] + "B3"), borderColor: C("--surface"), borderWidth: 1 }];
+    charts.timeline.update();
+
+    // 步驟 2
+    const aList = [["現金與存款", S.a_cash, "--c-cash"], ["股票", S.a_stock, "--c-stock"], ["債券", S.a_bond, "--c-bond"], ["黃金", S.a_gold, "--c-gold"],
+      ["REITs", S.a_reit, "--c-reit"], ["不動產", S.a_re, "--c-re"], ["其他", S.a_other, "--c-other"]].filter((x) => x[1] > 0);
+    charts.asset.data.labels = aList.map((x) => x[0]);
+    charts.asset.data.datasets[0].data = aList.map((x) => x[1]);
+    charts.asset.data.datasets[0].backgroundColor = aList.map((x) => C(x[2]));
+    charts.asset.data.datasets[0].borderColor = C("--surface");
+    charts.asset.update();
+    charts.bs.data.datasets[0].data = [R.assetsTotal, R.liabTotal, R.NW];
+    charts.bs.data.datasets[0].backgroundColor = [accent, warn, R.NW >= 0 ? ok : warn];
+    charts.bs.update();
+
+    $("efMonthsOut").textContent = S.efMonths;
+    const ratio = Math.min(1, R.efRatio);
+    $("efFill").style.width = (ratio * 100).toFixed(1) + "%";
+    $("efFill").style.background = R.efGap > 0 ? warn : ok;
+    $("efTarget").textContent = fmtW(R.EFt);
+    $("efAvail").textContent = fmtW(R.Lavail);
+    $("efCover").textContent = R.coverMonths == null ? "—" : R.coverMonths.toFixed(1) + " 個月";
+    $("efBadge").innerHTML = R.efGap > 0 ? badge("warn", "完成 " + pct(R.efRatio)) : badge("ok", "已足額");
+    const essTxt = "必要支出每月 " + fmt(R.essentialEF) + (S.efIncludeDebt ? "（含債務還款）" : "（伙食＋固定成本＋醫藥雜支）");
+    if (R.efGap > 0) {
+      const months = R.FCF > 0 ? Math.ceil(R.efGap / R.FCF) : null;
+      $("efMsg").innerHTML = `<div class="callout warn">${essTxt}，${S.efMonths} 個月加備用金共需 ${fmt(R.EFt)}，還差 <strong class="num">${fmt(R.efGap)}</strong>。${months ? "用每月自由現金流全額補足約需 " + months + " 個月。" : "目前沒有自由現金流可補足，請先調整收支。"}建議先補足預備金，再增加投資。</div>`;
+    } else {
+      $("efMsg").innerHTML = `<div class="callout ok">${essTxt}，可動用資金已能撐 ${R.coverMonths == null ? "—" : R.coverMonths.toFixed(1)} 個月，超過設定的 ${S.efMonths} 個月。</div>`;
+    }
+
+    // 步驟 3
+    const autoTxt = (v, t) => `<span class="small muted">${t}</span> ${badge("assume", v + " / 4")}`;
+    if ($("auto_c3")) $("auto_c3").innerHTML = autoTxt(R.c3, "已完成 " + pct(Math.min(1, R.efRatio)));
+    if ($("auto_c4")) $("auto_c4").innerHTML = autoTxt(R.c4, "還款占收入 " + pct(R.dti, 1));
+    $("riskName").textContent = MODELS[R.rec].name;
+    [...$("profileScale").children].forEach((d, i) => d.classList.toggle("on", i === R.rec));
+    charts.riskBar.data.datasets[0].data = [R.cap, R.will];
+    charts.riskBar.data.datasets[0].backgroundColor = [C("--c-stock"), C("--c-gold")];
+    charts.riskBar.update();
+    const pc = R.capItems.map(() => C("--c-stock")).concat(R.willItems.map(() => C("--c-gold")));
+    charts.radar.data.datasets = [{ label: "得分（藍＝能力、金＝意願）", data: R.capItems.concat(R.willItems), borderColor: accent, backgroundColor: accent + "26",
+      pointBackgroundColor: pc, pointBorderColor: pc, pointRadius: 5, borderWidth: 2 }];
+    charts.radar.options.scales.r.pointLabels.color = C("--ink");
+    charts.radar.update();
+    let rmsg = `承受能力屬「${MODELS[R.capL].name}」、承受意願屬「${MODELS[R.willL].name}」，取較低者為「${MODELS[R.rec].name}」。`;
+    if (Math.abs(R.capL - R.willL) >= 2) rmsg += R.capL > R.willL
+      ? "你的財務條件能承擔更多波動，但心理上不一定忍得住，大跌時可能被迫退出，所以依意願配置。"
+      : "你願意承擔風險，但財務條件撐不住大幅虧損。需要高報酬不是提高風險等級的理由。";
+    $("riskMsg").innerHTML = `<div class="callout ${Math.abs(R.capL - R.willL) >= 2 ? "warn" : "ok"}">${rmsg}</div>`;
+
+    // 步驟 4
+    const M = MODELS[R.level];
+    $("levelChips").innerHTML = MODELS.map((m, i) => `<button type="button" data-level="${i}" class="${i === R.level ? "on" : ""} ${i === R.rec ? "rec" : ""}">${m.name}</button>`).join("");
+    $("allocTitle").textContent = M.name + "配置比例";
+    $("investableNote").textContent = "可配置金額 " + fmt(R.investable);
+    charts.alloc.data.datasets[0].data = ASSETS.map((a) => M.w[a.key]);
+    charts.alloc.data.datasets[0].backgroundColor = ASSETS.map((a) => C(a.color));
+    charts.alloc.data.datasets[0].borderColor = C("--surface");
+    charts.alloc.update();
+
+    const cur = { stock: S.a_stock, bond: S.a_bond, gold: S.a_gold, reit: S.a_reit, cash: S.a_cash };
+    const curT = R.financial || 1;
+    $("allocTable").innerHTML = `<thead><tr><th>資產</th><th>建議比例</th><th>建議金額</th><th>目前比例</th></tr></thead><tbody>` +
+      ASSETS.map((a) => `<tr><td><span class="swatch" style="background:var(${a.color})"></span>${a.name}</td><td class="num">${M.w[a.key]}%</td><td class="num">${fmt(R.investable * M.w[a.key] / 100)}</td><td class="num">${(cur[a.key] / curT * 100).toFixed(0)}%</td></tr>`).join("") +
+      `</tbody>`;
+    let amsg = "";
+    if (R.efGap > 0) amsg += `<div class="callout warn">緊急預備金還差 ${fmt(R.efGap)}。請先補足預備金，這部分不列入可配置金額。</div>`;
+    const near = R.goals.filter((g) => g.years <= 3);
+    if (near.length) amsg += `<div class="callout pending">「${near.map((g) => esc(g.name)).join("、")}」在 3 年內到期，這筆錢較適合放現金或短期債券，不要放進這個長期組合。</div>`;
+    if (R.investable <= 0) amsg += `<div class="callout warn">扣掉已指派給目標的資金與緊急預備金後，目前沒有可配置金額，表格金額為 0。比例仍可作為之後每月投入的參考。</div>`;
+    amsg += `<p class="note">可配置金額＝金融資產 ${fmt(R.financial)} − 已指派給目標 ${fmt(R.assigned)} − 緊急預備金目標 ${fmt(R.EFt)}。組合比例為教學範例，不是投資建議。</p>`;
+    $("allocMsg").innerHTML = amsg;
+
+    charts.compare.data.datasets = [
+      { label: "目前持有", data: ASSETS.map((a) => +(cur[a.key] / curT * 100).toFixed(1)), backgroundColor: C("--c-other"), borderRadius: 4 },
+      { label: "建議（" + M.name + "）", data: ASSETS.map((a) => M.w[a.key]), backgroundColor: ASSETS.map((a) => C(a.color)), borderRadius: 4 }
+    ];
+    charts.compare.update();
+
+    const losses = MODELS.map((m) => +(R.lossOf(m.w) * 100).toFixed(1));
+    const accept = -ACCEPT_LOSS[S.answers.w3];
+    charts.stress.data.datasets = [
+      { type: "bar", label: "情境損益", data: losses, backgroundColor: losses.map((v, i) => i === R.level ? (v < accept ? warn : accent) : C("--c-other") + "99"), borderRadius: 6, order: 2 },
+      { type: "line", label: "你可接受的最大虧損", data: MODELS.map(() => accept), borderColor: warn, borderDash: [6, 4], pointRadius: 0, borderWidth: 2, order: 1 }
+    ];
+    charts.stress.update();
+    const myLoss = losses[R.level];
+    $("stressBadge").innerHTML = myLoss < accept ? badge("warn", M.name + " " + myLoss + "%，超出可接受") : badge("ok", M.name + " " + myLoss + "%");
+    ASSETS.forEach((a) => { const o = $("sh_out_" + a.key); if (o) o.textContent = (S.shocks[a.key] > 0 ? "+" : "") + S.shocks[a.key] + "%"; });
+
+    save();
+  }
+
+  /* ---------- 事件 ---------- */
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (FIELD_IDS.includes(t.id)) { S[t.id] = num(t.value); return update(); }
+    if (t.id === "efMonths") { S.efMonths = num(t.value); return update(); }
+    if (t.id === "efIncludeDebt") { S.efIncludeDebt = t.checked; return update(); }
+    if (t.dataset.shock) { S.shocks[t.dataset.shock] = num(t.value); return update(); }
+    const row = t.closest(".goal");
+    if (row && t.dataset.k) {
+      const g = S.goals[+row.dataset.i];
+      g[t.dataset.k] = t.dataset.k === "name" ? t.value : num(t.value);
+      return update();
+    }
+    if (t.type === "radio") { S.answers[t.name] = +t.value; S.pick = null; return update(); }
+  });
+  document.addEventListener("change", (e) => { if (e.target.id === "efIncludeDebt") { S.efIncludeDebt = e.target.checked; update(); } });
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.del != null) { S.goals.splice(+t.dataset.del, 1); renderGoals(); update(); }
+    else if (t.id === "addGoal") { S.goals.push({ name: "新目標", cost: 500000, years: 5, assigned: 0 }); renderGoals(); update(); }
+    else if (t.dataset.level != null) { const lv = +t.dataset.level; S.pick = lv === compute().rec ? null : lv; update(); }
+    else if (t.dataset.step || t.dataset.go) { go(+(t.dataset.step || t.dataset.go)); }
+    else if (t.id === "resetBtn") { S = clone(DEFAULTS); fillInputs(); update(); }
+  });
+
+  function go(n, fromHash) {
+    document.querySelectorAll("nav.steps button").forEach((b) => b.setAttribute("aria-selected", String(+b.dataset.step === n)));
+    for (let i = 1; i <= 4; i++) $("step" + i).hidden = i !== n;
+    if (!fromHash) { try { history.replaceState(null, "", "#step" + n); } catch (e) {} }
+    // 切換步驟時重播圖表進場動畫
+    requestAnimationFrame(() => {
+      const map = { 1: ["cf", "goal", "timeline"], 2: ["asset", "bs"], 3: ["riskBar", "radar"], 4: ["alloc", "compare", "stress"] };
+      map[n].forEach((k) => { const c = charts[k]; c.resize(); if (!reduce) { c.reset(); c.update(); } });
+    });
+    if (!fromHash) { const top = document.querySelector("nav.steps"); if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }
+  }
+
+  // 主題切換時重新套色
+  const refreshTheme = () => { chartDefaults(); Object.values(charts).forEach((c) => {
+    ["x", "y", "r"].forEach((ax) => { const s = c.options.scales && c.options.scales[ax]; if (s) { if (s.grid) s.grid.color = css("--line"); if (s.angleLines) s.angleLines.color = css("--line"); s.ticks = Object.assign(s.ticks || {}, { color: css("--muted") }); } });
+    if (c.options.plugins.legend.labels) c.options.plugins.legend.labels.color = css("--muted");
+  }); update(); };
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
+  new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  function start() {
+    if (typeof Chart === "undefined") {
+      document.querySelector(".summary").insertAdjacentHTML("afterend", '<div class="callout warn">圖表函式庫載入失敗，請確認網路連線後重新整理。</div>');
+      return;
+    }
+    initCharts(); fillInputs(); update();
+    const m = /^#step([1-4])$/.exec(location.hash); go(m ? +m[1] : 1, true);
+    window.addEventListener("hashchange", () => { const h = /^#step([1-4])$/.exec(location.hash); if (h) go(+h[1], true); });
+  }
+  start();
+})();
+</script>
+</body>
+</html>
